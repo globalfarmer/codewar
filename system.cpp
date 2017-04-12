@@ -3,9 +3,9 @@ using namespace std;
 
 const int dx[9] = {-1, -1, -1,  0, 0,  1, 1, 1, 0};
 const int dy[9] = {-1,  0,  1, -1, 1, -1, 0, 1, 0};
-const string DIRECT_NAME[4] = { "LEFT", "RIGHT", "UP", "DOWN"};
-const int dir_x[4] = { 0, 0, -1, 1};
-const int dir_y[4] = {-1, 1,  0, 0};
+const string DIRECT_NAME[4] = { "LEFT", "UP", "RIGHT", "DOWN"};
+const int dir_x[4] = { 0, -1, 0, 1};
+const int dir_y[4] = {-1,  0, 1, 0};
 const string EMPTY_LINE = "000000000000000000000000000000";
 
 class State
@@ -14,46 +14,31 @@ public:
 	vector<string> table;
 	vector<string> lastCellState;
 	vector<pair<int, int> > playersPos;
-	State()
-	{
-		this->table = this->lastCellState = vector<string>(20, EMPTY_LINE);
-	}
-	State(const vector<string>& _table, const vector<pair<int, int> >& _playersPos)
-	{
-		this->lastCellState = vector<string>(20, EMPTY_LINE);
-		this->table = _table;
-		this->playersPos = _playersPos;
-	}
-	void printState()
-	{
-		for(int i = 0; i < 20; i++) {
-			for(int j = 0; j < 30; j++) {
-				if( this->lastCellState[i][j] == '0')
-					cout << ".";
-				else
-					cout << this->lastCellState[i][j];
-			}
-			cout << endl;
-		}
-		cout << "----------------------------------" << endl;
-		for(int i = 0; i < 20; i++)
-		{
-			// cout << this->table[i] << endl;
-			for(int j = 0; j < 30; j++)
-			{
-				if( this->table[i][j] == '0')
-					cout << ".";
-				else
-					cout << this->table[i][j];
-			}
-			cout << endl;
-		}
-		for(int i = 0; i < this->playersPos.size(); i++)
-		{
-			cout << this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
-		}
-	}
+	State();
+	State(const vector<string>& _table, const vector<pair<int, int> >& _playersPos);
+	void printState();
 };
+
+class Helper {
+public:
+	bool dfs(pair<int, int> pos, State &state, vector<string> &mark, int playerId);
+	void stablize(int playerId, State &state);
+	int getDirectID(int playerId,const vector<State>& states, const vector<string> &decisions);
+	bool isOuter(const pair<int, int>& pos);
+	/**
+	/* @brief: check if playerId make a decision in law, if true update currentPos of playerId
+	/* @return: playerId make a decision in law
+
+	case1: Không đưa ra được nước đi nào (sau thời gian timeout là 1s)
+	case2: Đưa ra các output không đúng với format 4 hướng di chuyển
+	case3: Đi ra khỏi bàn đấu
+	case4: Đi ngược lại với hướng đi của lượt trước đó
+	case5: Đi vào ô unstable của chính mình
+	*/
+
+	int decisionInLaw(int playerId, const vector<State> &states, const vector<string> &decisions);
+	int currentDirect(int playerId, const vector<State>& states);
+} helper;
 
 class Player
 {
@@ -88,19 +73,7 @@ public:
 	int minDistanceToOtherUnstable();
 	int minDistanceToStable();
 	void printPos(int);
-	int currentDirect(int);
 };
-int Player::currentDirect(int playerId)
-{
-    if( this->states.size() == 1) return -1;
-    pair<int, int> lastPos = this->states[this->states.size()-1].playersPos[playerId-1];
-    pair<int, int> prevPos = this->states[this->states.size()-2].playersPos[playerId-1];
-    pair<int, int> delta = make_pair(lastPos.first - prevPos.first, lastPos.second - prevPos.second);
-    for(int i = 0; i < 4; i++)
-        if( delta.first == dir_x[i] && delta.second == dir_y[i] )
-            return i;
-    return 555;
-}
 Player::Player(int _numberOfPlayer,int _ownId,const vector<string> &_table, const vector<pair<int, int> > &_playersPos)
 {
 	this->turn = 0;
@@ -168,25 +141,8 @@ public:
 	/*	 + updateTable
 	*/
     void nextTurn(const vector<string>&);
-	/***
-	/* @brief: update table
-	/* @param: const vector<string>& decisions
-	/* @step:
-	/*  - remove losers
-	/*  - update stable cell
-    */
-	void stablize(int, State&);
 	void updateGame(const vector<string>& decisions);
-	/***
-	/* @param int playerId
-	/* @param const State& state
-	/* @param const vector<string>& decsions
-	*/
-	int getDirectID(int,const State&, const vector<string>&);
-	bool decisionInLawAndChangePos(int playerId, State &state, const vector<string> &decisions);
 	void updateStatePlayer();
-	bool isOuter(const pair<int, int>&);
-	bool dfs(pair<int, int>, State&, vector<string>&, int);
 	void testConstructor()
 	{
 		cout << "Number of Player " << this->numberOfPlayer << endl;
@@ -206,9 +162,9 @@ public:
 };
 int main()
 {
-	Splix splix = Splix(1);
+	Splix splix = Splix(2);
 	// splix.testConstructor();
-	for(int step = 0; step < 40; step++) {
+	for(int step = 0; step < 60; step++) {
 		splix.updateStatePlayer();
 		splix.printPulse();
 		splix.nextTurn();
@@ -224,7 +180,7 @@ Splix::Splix(int _numberOfPlayer)
 	this->turn = 0;
 	pair<int, int> pos[4] = {
 		make_pair(5,5),
-		make_pair(5, 24),
+		make_pair(5, 15),
 		make_pair(9, 10),
 		make_pair(14, 24)
 	};
@@ -301,63 +257,6 @@ void Splix::nextTurn()
 	this->updateGame(decision);
 	this->turn++;
 }
-int Splix::getDirectID(int playerId,const State& state, const vector<string> &decisions)
-{
-	int directId = -1;
-	for(int j = 0; j < 4; j++)
-	{
-		if( decisions[playerId-1] == DIRECT_NAME[j] )
-		{
-			directId = j;
-			break;
-		}
-	}
-	if( directId == -1) return -1;
-	int previousDirect = this->players[playerId-1].currentDirect(playerId);
-	if( previousDirect != -1 &&
-        (
-        (DIRECT_NAME[directId] == "UP" && DIRECT_NAME[previousDirect] == "DOWN") ||
-		(DIRECT_NAME[directId] == "DOWN" && DIRECT_NAME[previousDirect] == "UP") ||
-		(DIRECT_NAME[directId] == "RIGHT" && DIRECT_NAME[previousDirect] == "LEFT") ||
-		(DIRECT_NAME[directId] == "LEFT" && DIRECT_NAME[previousDirect] == "RIGHT")
-        )
-	  )
-		return -1;
-	return directId;
-}
-bool Splix::isOuter(const pair<int, int>& pos)
-{
-	return (pos.first < 0 || pos.first >= 20 || pos.second < 0 || pos.second >= 30);
-}
-/**
-/* @brief: check if playerId make a decision in law, if true update currentPos of playerId
-/* @return: playerId make a decision in law
-
-case1: Không đưa ra được nước đi nào (sau thời gian timeout là 1s)
-case2: Đưa ra các output không đúng với format 4 hướng di chuyển
-case3: Đi ra khỏi bàn đấu
-case4: Đi ngược lại với hướng đi của lượt trước đó
-case5: Đi vào ô unstable của chính mình
-*/
-
-bool Splix::decisionInLawAndChangePos(int playerId, State &state, const vector<string> &decisions)
-{
-	if( state.playersPos[playerId-1] == make_pair(-1, -1) ) return true;
-	int directId = this->getDirectID(playerId, state, decisions);
-	cout << "directId " << playerId <<" "<<directId << endl;
-	bool goInOwnUnstable;
-	if( directId == -1) return false;
-	pair<int, int> newPos;
-	newPos.first = state.playersPos[playerId-1].first + dir_x[directId];
-	newPos.second = state.playersPos[playerId-1].second + dir_y[directId];
-	cout << "newPos " << newPos.first <<" "<<newPos.second << endl;
-	bool isOuter = this->isOuter(newPos);
-	if( isOuter ) return false;
-	goInOwnUnstable = state.table[newPos.first][newPos.second] == playerId * 2;
-	if( goInOwnUnstable ) return false;
-	state.playersPos[playerId-1] = newPos;
-	return true;
-}
 /***
 /* @brief: update Game(last state)
 /* @step:
@@ -371,7 +270,16 @@ void Splix::updateGame(const vector<string> &decisions)
 	vector<bool> illegalDecision = vector<bool>(this->numberOfPlayer, false);
 	for(int i = 0; i < this->numberOfPlayer; i++)
 	{
-		illegalDecision[i] = !this->decisionInLawAndChangePos(i+1, lastState, decisions);
+		int directID = helper.decisionInLaw(i+1, this->states, decisions);
+		if(  directID != -1)
+		{
+			lastState.playersPos[i].first += dir_x[directID];
+			lastState.playersPos[i].second += dir_y[directID];
+		}
+		else
+		{
+			illegalDecision[i] = true;
+		}
 	}
 	for(int i = 0; i < illegalDecision.size(); i++)	cout << illegalDecision[i] << " ";
 	cout << endl;
@@ -402,8 +310,6 @@ void Splix::updateGame(const vector<string> &decisions)
 						lastState.table[i][j] = lastState.lastCellState[i][j];
 						lastState.lastCellState[i][j] = '0';
 					}
-					if( (lastState.lastCellState[i][j] - '0' + 1) / 2 == id )
-						lastState.lastCellState[i][j] = '0';
 				}
 			}
 		}
@@ -419,6 +325,8 @@ void Splix::updateGame(const vector<string> &decisions)
 						lastState.table[i][j] = lastState.lastCellState[i][j];
 						lastState.lastCellState[i][j] = '0';
 					}
+					if( (lastState.lastCellState[i][j] - '0' + 1) / 2 == id )
+						lastState.lastCellState[i][j] = '0';
 				}
 			}
 		}
@@ -436,14 +344,56 @@ void Splix::updateGame(const vector<string> &decisions)
 	for(int i = 0; i < this->numberOfPlayer; i++) 
 	{
 		pair<int, int> pos = lastState.playersPos[i];
-		if( lastState.table[pos.first][pos.second] == (i+1) * 2 - 1 + '0') {
+		if( pos != make_pair(-1, -1) && lastState.table[pos.first][pos.second] == (i+1) * 2 - 1 + '0') {
 			cout <<"Stablize "<<i+1<<endl;
-			this->stablize(i+1, lastState);
+			helper.stablize(i+1, lastState);
 		}
 	}
 	this->states.push_back(lastState);
 }
-bool Splix::dfs(pair<int, int> pos, State &state, vector<string> &mark, int playerId) 
+
+
+State::State()
+{
+	this->table = this->lastCellState = vector<string>(20, EMPTY_LINE);
+}
+State::State(const vector<string>& _table, const vector<pair<int, int> >& _playersPos)
+{
+	this->lastCellState = vector<string>(20, EMPTY_LINE);
+	this->table = _table;
+	this->playersPos = _playersPos;
+}
+void State::printState()
+{
+	for(int i = 0; i < 20; i++) {
+		for(int j = 0; j < 30; j++) {
+			if( this->lastCellState[i][j] == '0')
+				cout << ".";
+			else
+				cout << this->lastCellState[i][j];
+		}
+		cout << endl;
+	}
+	cout << "----------------------------------" << endl;
+	for(int i = 0; i < 20; i++)
+	{
+		// cout << this->table[i] << endl;
+		for(int j = 0; j < 30; j++)
+		{
+			if( this->table[i][j] == '0')
+				cout << ".";
+			else
+				cout << this->table[i][j];
+		}
+		cout << endl;
+	}
+	for(int i = 0; i < this->playersPos.size(); i++)
+	{
+		cout << this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
+	}
+}
+
+bool Helper::dfs(pair<int, int> pos, State &state, vector<string> &mark, int playerId) 
 {
 	mark[pos.first][pos.second] = '1';
 	bool ret = true;
@@ -462,7 +412,7 @@ bool Splix::dfs(pair<int, int> pos, State &state, vector<string> &mark, int play
 	}
 	return ret;
 }
-void Splix::stablize(int playerId, State &state) 
+void Helper::stablize(int playerId, State &state) 
 {
 	vector<string> mark = vector<string>(20, EMPTY_LINE);
 	for(int i = 0; i < 20; i++) {
@@ -497,4 +447,65 @@ void Splix::stablize(int playerId, State &state)
 			}
 		}
 	}
+}
+int Helper::currentDirect(int playerId, const vector<State>& states)
+{
+    if( states.size() <= 1) return -1;
+    pair<int, int> lastPos = states[states.size()-1].playersPos[playerId-1];
+    pair<int, int> prevPos = states[states.size()-2].playersPos[playerId-1];
+    pair<int, int> delta = make_pair(lastPos.first - prevPos.first, lastPos.second - prevPos.second);
+    for(int i = 0; i < 4; i++)
+        if( delta.first == dir_x[i] && delta.second == dir_y[i] )
+            return i;
+    return 555;
+}
+int Helper::getDirectID(int playerId,const vector<State>& states, const vector<string> &decisions)
+{
+	int directId = -1;
+	for(int j = 0; j < 4; j++)
+	{
+		if( decisions[playerId-1] == DIRECT_NAME[j] )
+		{
+			directId = j;
+			break;
+		}
+	}
+	if( directId == -1) return -1;
+	int previousDirect = this->currentDirect(playerId, states);
+	// const string DIRECT_NAME[4] = { "LEFT", "UP", "RIGHT", "DOWN"};
+	if( previousDirect != -1 && directId != previousDirect && (directId - previousDirect) % 2 == 0 )
+		return -1;
+	return directId;
+}
+bool Helper::isOuter(const pair<int, int>& pos)
+{
+	return (pos.first < 0 || pos.first >= 20 || pos.second < 0 || pos.second >= 30);
+}
+/**
+/* @brief: check if playerId make a decision in law, if true update currentPos of playerId
+/* @return: playerId make a decision in law
+
+case1: Không đưa ra được nước đi nào (sau thời gian timeout là 1s)
+case2: Đưa ra các output không đúng với format 4 hướng di chuyển
+case3: Đi ra khỏi bàn đấu
+case4: Đi ngược lại với hướng đi của lượt trước đó
+case5: Đi vào ô unstable của chính mình
+*/
+
+int Helper::decisionInLaw(int playerId,const vector<State>& states, const vector<string> &decisions)
+{
+	State state = states[states.size()-1];
+	if( state.playersPos[playerId-1] == make_pair(-1, -1) ) return -1;
+	int directId = this->getDirectID(playerId, states, decisions);
+	cout << "directId " << playerId <<" "<<directId << endl;
+	if( directId == -1) return -1;
+	pair<int, int> newPos;
+	newPos.first = state.playersPos[playerId-1].first + dir_x[directId];
+	newPos.second = state.playersPos[playerId-1].second + dir_y[directId];
+	cout << "newPos " << newPos.first <<" "<<newPos.second << endl;
+	bool isOuter = this->isOuter(newPos);
+	if( isOuter ) return -1;
+	bool goInOwnUnstable = state.table[newPos.first][newPos.second] == playerId * 2 + '0';
+	if( goInOwnUnstable ) return -1;
+	return directId;
 }
