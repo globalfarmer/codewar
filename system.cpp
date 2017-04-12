@@ -24,14 +24,41 @@ public:
 	int minDistanceToStable();
 	void printPos(int);
 };
+class State
+{
+public:
+	string table[25];
+	vector<pair<int, int> > playersPos;
+	void printState() 
+	{
+		for(int i = 0; i < 20; i++) 
+		{
+			// cout << this->table[i] << endl;
+			for(int j = 0; j < 30; j++) 
+			{
+				if( this->table[i][j] == '0')
+					cout << ".";
+				else
+					cout << this->table[i][j];
+			}
+			cout << endl;
+		}
+		for(int i = 0; i < this->playersPos.size(); i++) 
+		{
+			cout << this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
+		}
+	}
+};
 class Splix
 {
 public:
 	// players (AI)
 	vector<Player> players;
-	string table[25];
+	vector<State> states;
+	int numberOfPlayer;
+	int turn;
 	Splix(int _numberOfPlayer);
-	Splix(int _numberOfPlayer, string table[25], const vector<pair<int, int> > &playerPos);
+	Splix(int _numberOfPlayer, string _table[25], const vector<pair<int, int> > &_playersPos);
 	~Splix();
 	/***
 	/* @brief get each player decision alternatively
@@ -43,33 +70,24 @@ public:
 	/*	 + updateTable
 	*/
 	void nextTurn();
-    void nextTurn(vector<string> decisionns);
+    void nextTurn(const vector<string> &decisions);
 	/***
 	/* @brief: update table
 	/* @step:
 	/*  - remove losers
 	/*  - update stable cell
     */
-	void updateTable();
+	void updateTable(const vector<string> &decisions);
 	void testConstructor()
 	{
-		this->printTable();
-		cout << "Number of Players "<<this->players.size()<<endl;
-		for(int i = 0; i < this->players.size(); i++) {
-			cout << "Player " << i+1 << " is at ";
-			players[i].printPos(players[i].ownId-1);
-		}
-	}
-	void printTable() 
-	{
-		for(int i = 0; i < 20; i++) {
-			cout << this->table[i] << endl;
-		}
+		cout << "Number of Player " << this->numberOfPlayer << endl;
+		cout << "Turn " << this->turn << endl;
+		this->states[0].printState();
 	}
 };
 int main() 
 {
-	Splix splix = Splix(4);
+	Splix splix = Splix(3);
 	splix.testConstructor();
 	return 0;
 }
@@ -88,35 +106,34 @@ Player::~Player()
 }
 Splix::Splix(int _numberOfPlayer)
 {
-	this->players.clear();
+	this->numberOfPlayer = _numberOfPlayer;
+	this->turn = 0;
 	pair<int, int> pos[4] = {
 		make_pair(5,5), 
 		make_pair(5, 24), 
 		make_pair(14, 5), 
 		make_pair(14, 24)
 	};
+	State state;
+	state.playersPos = vector<pair<int, int> >(pos, pos+_numberOfPlayer);
 	for(int i = 0; i < 20; i++) {
-		table[i] = "000000000000000000000000000000";
+		state.table[i] = "000000000000000000000000000000";
 	}
 	for(int i = 1; i <= _numberOfPlayer; i++) {
 		for(int j = 0; j < 9; j++) {
-			table[pos[i-1].first + dx[j]][pos[i-1].second + dy[j]] = i * 2 - 1 + '0';
+			state.table[pos[i-1].first + dx[j]][pos[i-1].second + dy[j]] = i * 2 - 1 + '0';
 		}
 	}
-	for(int i = 1; i <= _numberOfPlayer; i++) {
-		Player player = Player
-		(
-			_numberOfPlayer, 
-			i, 
-			this->table, 
-			vector<pair<int, int> >(pos, pos+_numberOfPlayer)
-		);
-		this->players.push_back(player);
-	}
+	this->states.push_back(state);
 }
-Splix::Splix(int _numberOfPlayer, string _table[25], const vector<pair<int, int> > &playerPos) 
+Splix::Splix(int _numberOfPlayer, string _table[25], const vector<pair<int, int> > &_playersPos) 
 {
-
+	this->numberOfPlayer = _numberOfPlayer;
+	this->turn = 0;
+	State state;
+	copy(_table, _table+25, state.table);
+	state.playersPos = _playersPos;
+	this->states.push_back(state);
 }
 Splix::~Splix() 
 {
@@ -132,13 +149,35 @@ Splix::~Splix()
 */
 void Splix::nextTurn()
 {
-	vector<string> decision = vector<string>(this->players.size());
-	for(int i = 0; i < this->players.size(); i++) {
-		decision[i] = this->players.getDecision();
-	}
-	cout << "Decisions: "<<endl;
-	for(int i = 0; i < this->players.size(); i++) cout << decision[i]<<" "; cout << endl;
-	updateTable(decision);
+	// start game
+	// if( this->turn == 0 ) 
+	// {
+	// 	for(int i = 1; i <= this->numberOfPlayer; i++) 
+	// 	{
+	// 		Player player = Player
+	// 		(
+	// 			_numberOfPlayer,
+	// 			i, 
+	// 			this->states[this->turn].table, 
+	// 			this->states[this->turn].playersPos
+	// 		);
+	// 		this->players.push_back(player);
+	// 	}
+	// }
+	// else
+	// {
+	// 	for(int i = 0; i < this->players.size(); i++) 
+	// 	{
+	// 		players[i].updateSate(this->states[this->turn].table, this.states[this->turn.playersPos]);
+	// 	}
+	// }
+	// vector<string> decision = vector<string>(this->numberOfPlayer);
+	// for(int i = 0; i < this->numberOfPlayer; i++) {
+	// 	decision[i] = this->players[i].getDecision();
+	// }
+	// cout << "Decisions: "<<endl;
+	// for(int i = 0; i < this->players.size(); i++) cout << decision[i]<<" "; cout << endl;
+	// updateTable(decision);
 }
 /***
 /* @brief: update table
@@ -146,7 +185,6 @@ void Splix::nextTurn()
 /*  - remove losers
 /*  - update stable cell
 */
-void Splix::updateTable(const vector<string> &decision);
+void Splix::updateTable(const vector<string> &decisions)
 {
-
 }
