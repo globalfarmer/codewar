@@ -6,6 +6,7 @@ const int dy[9] = {-1,  0,  1, -1, 1, -1, 0, 1, 0};
 const string DIRECT_NAME[4] = { "LEFT", "RIGHT", "UP", "DOWN"};
 const int dir_x[4] = { 0, 0, -1, 1};
 const int dir_y[4] = {-1, 1,  0, 0};
+const string EMPTY_LINE = "000000000000000000000000000000";
 
 class State
 {
@@ -15,11 +16,11 @@ public:
 	vector<pair<int, int> > playersPos;
 	State()
 	{
-		this->table = this->lastCellState = vector<string>(20, "000000000000000000000000000000");
+		this->table = this->lastCellState = vector<string>(20, EMPTY_LINE);
 	}
 	State(const vector<string>& _table, const vector<pair<int, int> >& _playersPos)
 	{
-		this->lastCellState = vector<string>(20, "000000000000000000000000000000");
+		this->lastCellState = vector<string>(20, EMPTY_LINE);
 		this->table = _table;
 		this->playersPos = _playersPos;
 	}
@@ -72,10 +73,14 @@ public:
 	~Player();
 	string getDecision()
 	{
-		if( this->ownId == 1) return "RIGHT";
-		else
-			if(this->ownId == 2) return "LEFT";
-		return DIRECT_NAME[this->ownId-1];
+		if(this->turn % 11 < 3 ) return "DOWN";
+			else if(this->turn % 11 < 6) return "RIGHT";
+				else if( this->turn % 11 < 9) return "UP";
+					return "LEFT";
+		// if( this->ownId == 1) return "RIGHT";
+		// else
+		// 	if(this->ownId == 2) return "LEFT";
+		// return DIRECT_NAME[this->ownId-1];
 	}
 	void updateState(const State&);
 	bool isValidDecision(string);
@@ -170,7 +175,7 @@ public:
 	/*  - remove losers
 	/*  - update stable cell
     */
-	void stablize(State&);
+	void stablize(int, State&);
 	void updateGame(const vector<string>& decisions);
 	/***
 	/* @param int playerId
@@ -181,6 +186,7 @@ public:
 	bool decisionInLawAndChangePos(int playerId, State &state, const vector<string> &decisions);
 	void updateStatePlayer();
 	bool isOuter(const pair<int, int>&);
+	bool dfs(pair<int, int>, State&, vector<string>&, int);
 	void testConstructor()
 	{
 		cout << "Number of Player " << this->numberOfPlayer << endl;
@@ -200,9 +206,9 @@ public:
 };
 int main()
 {
-	Splix splix = Splix(3);
+	Splix splix = Splix(1);
 	// splix.testConstructor();
-	for(int step = 0; step < 10; step++) {
+	for(int step = 0; step < 40; step++) {
 		splix.updateStatePlayer();
 		splix.printPulse();
 		splix.nextTurn();
@@ -229,9 +235,6 @@ Splix::Splix(int _numberOfPlayer)
 	// 	make_pair(14, 24)
 	// };
 	State state;
-	for(int i = 0; i < 20; i++) {
-		state.table[i] = "000000000000000000000000000000";
-	}
 	for(int i = 1; i <= _numberOfPlayer; i++) {
 		for(int j = 0; j < 9; j++) {
 			state.table[pos[i-1].first + dx[j]][pos[i-1].second + dy[j]] = i * 2 - 1 + '0';
@@ -266,6 +269,7 @@ void Splix::updateStatePlayer()
 				this->states[this->turn].table,
 				this->states[this->turn].playersPos
 			);
+			player.turn = this->turn;
 			this->players.push_back(player);
 		}
 	}
@@ -274,6 +278,7 @@ void Splix::updateStatePlayer()
 		for(int i = 0; i < this->players.size(); i++)
 		{
 			players[i].updateState(this->states[this->turn]);
+			players[i].turn = this->turn;
 		}
 	}
 }
@@ -428,10 +433,68 @@ void Splix::updateGame(const vector<string> &decisions)
 			}
 		}
 	}
-	this->stablize(lastState);
+	for(int i = 0; i < this->numberOfPlayer; i++) 
+	{
+		pair<int, int> pos = lastState.playersPos[i];
+		if( lastState.table[pos.first][pos.second] == (i+1) * 2 - 1 + '0') {
+			cout <<"Stablize "<<i+1<<endl;
+			this->stablize(i+1, lastState);
+		}
+	}
 	this->states.push_back(lastState);
 }
-void Splix::stablize(State &state) 
+bool Splix::dfs(pair<int, int> pos, State &state, vector<string> &mark, int playerId) 
 {
-
+	mark[pos.first][pos.second] = '1';
+	bool ret = true;
+	for(int j = 0; j < 4; j++) {
+		pair<int, int> newPos = make_pair(pos.first + dir_x[j], pos.second + dir_y[j]);
+		if( !this->isOuter(newPos) ) 
+		{
+			if( mark[newPos.first][newPos.second] == '0' && 
+			   ((state.table[newPos.first][newPos.second] - '0' + 1)/2 != playerId))
+					ret &= dfs(newPos, state, mark, playerId);
+		}
+		else
+		{
+			ret = false;
+		}
+	}
+	return ret;
+}
+void Splix::stablize(int playerId, State &state) 
+{
+	vector<string> mark = vector<string>(20, EMPTY_LINE);
+	for(int i = 0; i < 20; i++) {
+		for(int j = 0; j < 30; j++) if( (state.table[i][j] -'0' + 1)/2 != playerId && mark[i][j] == '0') {
+			if( dfs(make_pair(i, j), state, mark, playerId) )
+			{	
+				// cout << " DFS_------" << i <<" "<<j<< " true"<<endl;
+				for(int i = 0; i < 20; i++) {
+					for(int j = 0; j < 30; j++)
+						if(mark[i][j]=='1') 
+						{
+							state.table[i][j] = playerId * 2 - 1 + '0';
+							state.lastCellState[i][j] = '0';
+						}
+				}
+			}
+			else
+			{
+				// cout << " DFS_------" << i <<" "<<j<< " false"<<endl;
+			}
+			for(int i = 0; i < 20; i++) {
+				for(int j = 0; j < 30; j++)
+					if(mark[i][j] == '1' ) mark[i][j] = '2';
+			}
+		}
+	}
+	for(int i = 0; i < 20; i++) {
+		for(int j = 0; j < 30; j++) {
+			if( state.table[i][j] == playerId * 2 + '0' ) {
+				state.table[i][j] = playerId * 2 - 1 + '0';
+				state.lastCellState[i][j] = '0';
+			}
+		}
+	}
 }
