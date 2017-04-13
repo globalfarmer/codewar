@@ -65,9 +65,7 @@ public:
 	Player(int, int, const vector<string>&, const vector<pair<int, int> >&);
 	~Player();
 	string getDecision();
-	pair<int, string> getDecision2(int depth, int playerId, State, State) ;
-	pair<int, string> getDecision3();
-	pair<int, string> getDecision4();
+	bool Player::findACertainPath(int playerId, State state, queue<pair<int, int> > &steps);
 	void updateState(const State&);
 	int getScore(int);
 };	
@@ -97,6 +95,152 @@ int Player::getScore(int playerId)
 Player::~Player()
 {
 
+}
+bool Player::findACertainPath(int playerId, State state, queue<pair<int, int> > &steps)
+{
+	if( state.playersPos[playerId-1] == make_pair(-1, -1) )
+		return false;
+	queue<pair<int, int> > q;
+	int maxL = 0;
+	// find d[i][j] is minimum turn in Which an enemy can reach to [i,j]
+	vector<vector<int> > d = vector<vector<int> >(20, vector<int>(30, -1));
+	q = queue<pair<int, int> >();
+	for(int i = 0; i < state.playersPos.size(); i++) 
+		if( i+1 != playerId && state.playersPos[i] != make_pair(-1, -1))
+	{
+		d[state.playersPos[i].first][state.playersPos[i].second] = 0;
+		q.push(state.playersPos[i]);
+	}
+	while(!q.empty()) 
+	{
+		pair<int, int> pos = q.front(); q.pop();
+		// cout << pos.first <<" "<<pos.second << endl;
+		for(int j = 0; j < 4; j++) 
+		{
+			pair<int, int> newPos = make_pair(pos.first + dir_x[j], pos.second + dir_y[j]);
+			if( !helper.isOuter(newPos) && d[newPos.first][newPos.second] == -1) 
+			{
+				d[newPos.first][newPos.second] = d[pos.first][pos.second] + 1;
+				maxL = max(maxL, d[newPos.first][newPos.second]);
+				q.push(newPos);
+			}
+		}
+	}
+	vector<vector<int> > mark;
+	string llabel[4] = {"RIGHT", "DOWN", "LEFT", "UP"};
+	// "RIGHT", "DOWN", "LEFT", "UP";	
+	vector<string> label_cw(llabel, llabel+4);
+	pair<int> dd[4] = {make_pair(0,1), make_pair(1, 0), make_pair(0,-1), make_pair(-1, 0)};
+	vector<pair<int, int> > d_cw(dd, dd+4);;
+	// "LEFT", "DOWN", "RIGHT", "UP"
+	vector<string> label_ccw = label_cw;
+	swap(label_ccw[0], label_ccw[2]);
+	vector<pair<int, int> > d_ccw = d_cw;;
+	swap(d_ccw[0], label_ccw[2]);
+	int ret = -1;
+	for(int l = maxL; l >= 4; l--) 
+		if( d[state.playersPos[playerId-1].fist][state.playersPos[playerId-1].second] >= l )
+	{
+		mark = vector<vector<bool> >(20, vector<bool>(30, false));
+		for(int i = 0; i < 20; i++) {
+			for(int j = 0; j < 30; j++) mark[i][j] = d[i][j] >= l;
+		}
+		for(int r = 2; r <= 20; r++) 
+		{
+			for(int c = 2; c <= 30; c++) 
+			{
+				for(int x = 0; x <= 20 - r; x++) 
+				{
+					for(int y = 0; y <= 30 - c; y++)
+					{
+						if( helper.inBound(state.playersPos[playerId-1], x, y, r, c) ) 
+						{
+							helper.findACertainPath_goAround(
+								playerId, 
+								state, 
+								mark,
+								ret,
+								steps,
+								d_cw,
+								label_cw);
+							helper.findACertainPath_goAround(
+								playerId, 
+								state, 
+								mark,
+								ret,
+								steps,
+								d_ccw,
+								label_ccw);
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret > 0;
+}
+bool Helper::findACertainPath_inBound(const pair<int, int> &pos, int x, int y, int r, int c)
+{
+	bool ret = (x == pos.first && pos.second >= y && pos.second < y + c);
+	ret |= (x + r - 1 == pos.first && pos.second >= y && pos.second < y + c)
+	ret |= (y == pos.second && pos.first >= x && pos.first < x + r);
+	ret |= (y + c - 1== pos.second && pos.first >= x && pos.first < x + r);
+	return ret;
+}
+void Helper::findACertainPath_goAround(int playerId,
+									const State& _state, 
+									const vector<vector<bool> >& mark, 
+									int &ret, 
+									queue<pair<int, int> >& steps,
+									const vector<pair<int, int> >& _d
+									const vector<string>& _label) 
+{
+	State tempState = _state;
+	int idx
+	queue<pair<int, int> > tmpStep;
+	int cnt = 0;
+	for(int i = 0; i < 4; i++) 
+	{
+		pair<int, int> newPos, pos = _state.playersPos[playerId-1];
+		newPos.first = pos.first + _d[i].first;
+		newPos.seoncd = pos.second + _d[i].second;
+		if( helper.inBound(newPos, x, y, r, c) && mark[newPos.first][newPos.second])
+		{
+			idx = i;
+			for(int loop = 0; loop < 4; loop++) 
+			{
+				while(cnt < 2 && inBound(newPos, x, y, r, c)) {
+					if( mark[newPos.first][newPos.second] == false ) return;
+					tmpStep.push(_d[i]);
+					if( tmpState.table[newPos.first][newPos.second] != tmpState.table[pos.first][pos.second] && 
+						(tmpState.table[newPos.first][newPos.second] == playerId * 2 - 1 + '0' || 
+						 tmpState.table[pos.first][pos.second] == playerId * 2 - 1 + '0')
+						)
+						cnt++;
+					if( tmpState.table[newPos.first][newPos.second] != playerId * 2 - 1 + '0' )
+						tmpState.table[newPos.first][newPos.second] == playerId * 2 + '0';
+					if( cnt == 2 ) break;
+					pos = newPos;
+					newPos.first = pos.first + _d[idx].first;
+					newPos.second = pos.second + _d[idx].second;
+				}
+				idx = (idx + 1) % 4;
+				newPos.first = pos.first + _d[idx].first;
+				newPos.second = pos.second + _d[idx].second;
+				break;
+			}
+			if(cnt == 2)
+			{
+				int tmp = helper.stablize(playerId, tmpState);
+				if( tmp > ret ) 
+				{
+					ret = tmp;
+					steps = tmpStep;
+				}
+			}
+
+		}
+	}
 }
 // string Player::minimax2(int depth, vector<State> states, vector<string> decisions) 
 // {
