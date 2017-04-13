@@ -65,13 +65,15 @@ public:
 	* @param const vector<string>& table
 	* @param const vector<pair<int, int> >& palyersPos
 	*/
+	Player();
 	Player(int, int, const vector<string>&, const vector<pair<int, int> >&);
 	~Player();
 	string getDecision();
 	bool findACertainPath(int playerId, State state, queue<string> &steps);
 	void updateState(const State&);
 	int getScore(int);
-};	
+};
+Player::Player(){}
 Player::Player(int _numberOfPlayer,int _ownId,const vector<string> &_table, const vector<pair<int, int> > &_playersPos)
 {
 	this->turn = 0;
@@ -129,14 +131,14 @@ bool Player::findACertainPath(int playerId, State state, queue<string> &steps)
 			}
 		}
 	}
-	if(maxL == -1)maxL = 30;
+	// if(maxL == -1)maxL = 30;
 	// for(int i = 0; i < 20; i++) {
 	// 	for(int j = 0; j < 30; j++) {
 	// 		cout << d[i][j] <<" ";
 	// 	}
 	// 	cout << endl;
 	// }
-	vector<vector<bool> > mark;
+	vector<vector<bool> > mark = vector<vector<bool> >(20, vector<bool>(30, true));
 	string llabel[4] = {"RIGHT", "DOWN", "LEFT", "UP"};
 	// "RIGHT", "DOWN", "LEFT", "UP";	
 	vector<string> label_cw(llabel, llabel+4);
@@ -148,22 +150,24 @@ bool Player::findACertainPath(int playerId, State state, queue<string> &steps)
 	vector<pair<int, int> > d_ccw = d_cw;;
 	swap(d_ccw[0], d_ccw[2]);
 	int ret = -1;
-	for(int l = maxL; l >= 4; l--) 
-		if( d[state.playersPos[playerId-1].first][state.playersPos[playerId-1].second] >= l )
+	// for(int l = 30; l >= 10; l--) 
+		// if( d[state.playersPos[playerId-1].first][state.playersPos[playerId-1].second] >= l )
 	{
-		mark = vector<vector<bool> >(20, vector<bool>(30, false));
-		for(int i = 0; i < 20; i++) 
-		{
-			for(int j = 0; j < 30; j++) mark[i][j] = d[i][j] >= l;
-		}
+		// mark = vector<vector<bool> >(20, vector<bool>(30, false));
+		// for(int i = 0; i < 20; i++) 
+		// {
+			// for(int j = 0; j < 30; j++) mark[i][j] = d[i][j] >= l;
+		// }
 		// if( l == maxL)
 		// for(int i = 0; i < 20; i++) 
 		// {
 		// 	for(int j = 0; j < 30; j++) cout << mark[i][j]; cout << endl;
 		// }
-		for(int r = 2; r <= min(l, 20); r++) 
+		int rr[4] = {5, 5, 5, 4};
+		int cc[4] = {8, 8, 8, 5};
+		for(int r = 3; r <= rr[this->numberOfPlayer]; r++) 
 		{
-			for(int c = 2; c <= min(l, 30)-r; c++) 
+			for(int c = 3; c <= cc[this->numberOfPlayer]; c++) 
 			{
 				for(int x = 0; x <= 20 - r; x++) 
 				{
@@ -186,7 +190,7 @@ bool Player::findACertainPath(int playerId, State state, queue<string> &steps)
 								y,
 								r,
 								c);
-							if( tmp > ret && tmpStep.size() <= l && !
+							if( tmp > ret && !
 								(
 									(this->lastStep=="DOWN" && tmpStep.front()=="UP") ||
 									(this->lastStep=="UP" && tmpStep.front()=="DOWN") ||
@@ -195,7 +199,16 @@ bool Player::findACertainPath(int playerId, State state, queue<string> &steps)
 								))
 							{
 								ret = tmp;
+								// queue<string> aa = tmpStep;
+								// cout <<" PATH " << endl;
+								// while(!aa.empty()) {
+								// 	cout << aa.front() <<" ";
+								// 	aa.pop();
+								// }
+								// cout << endl;
+								// cout << "ret " << ret << endl;
 								steps = tmpStep;
+								// cout << x<<" "<<y<<" "<<r<<" "<<c<<endl;
 							}
 						}
 					}
@@ -203,7 +216,7 @@ bool Player::findACertainPath(int playerId, State state, queue<string> &steps)
 			}
 		}
 	}
-	cout << "RETURN "<<(ret > 0)<<endl;
+	// cout << "RETURN "<<(ret > 0)<<endl;
 	return ret > 0;
 }
 bool Helper::findACertainPath_inBound(const pair<int, int> &pos, int x, int y, int r, int c)
@@ -229,7 +242,7 @@ void Helper::findACertainPath_goAround(int playerId,
 	pair<int, int> newPos, pos = _state.playersPos[playerId-1];
 	for(int i = 0; i < 4; i++) 
 	{
-		if(!((i==0 && pos.first==x) || (i==1 && pos.second==y) || (i==2 && pos.first==x+r-1) || (i==3 && pos.second==y+c-1)))
+		if(!((i==0 && pos.first==x) || (i==1 && pos.second==y+c-1) || (i==2 && pos.first==x+r-1) || (i==3 && pos.second==y)))
 			continue;
 		newPos.first = pos.first + _d[i].first;
 		newPos.second = pos.second + _d[i].second;
@@ -280,12 +293,37 @@ string Player::getDecision()
 	if(this->steps.empty())
 	{
 		bool haveAPath = this->findACertainPath(this->ownId, this->states[this->states.size()-1], this->steps);
-		if( !haveAPath){
-			this->steps = queue<string>();
-			for(int i = 0; i < 4; i++) 
-				this->steps.push(DIRECT_NAME[i]);
+		if( !haveAPath)
+		{
+			pair<int, int> pos = this->states[this->states.size()-1].playersPos[this->ownId-1];
+			int prevId = -1;
+			for(int i = 0; i < 4; i++) {
+				if( this->lastStep == DIRECT_NAME[i] ) {
+					prevId = i;
+					break;
+				}
+			}
+			for(int i = 0; i < 4; i++) {
+				if( prevId == -1 || (prevId - i) % 2 != 0) {
+					pair<int, int> newPos;
+					newPos.first = pos.first + dir_x[i];
+					newPos.second = pos.second + dir_y[i];
+					if( !helper.isOuter(newPos) ) {
+						this->steps.push(DIRECT_NAME[i]);
+						break;
+					}
+				}
+			}
 		}
 	}
+	// cout <<"Path "<<endl;
+	// queue<string> tmp = this->steps;
+	// while(!tmp.empty()) 
+	// {
+	// 	cout << tmp.front() << " ";
+	// 	tmp.pop();
+	// }
+	// cout << endl;
 	this->lastStep = this->steps.front(); this->steps.pop();
 	return this->lastStep;
 }
@@ -353,17 +391,44 @@ public:
 };
 int main()
 {
-	freopen("output.txt", "w", stdout);
-	srand (time(NULL));
-	Splix splix = Splix(2);
-	// splix.testConstructor();
-	for(int step = 0; step < 50; step++) {
-		splix.updateStatePlayer();
-		splix.printPulse();
-		splix.nextTurn();
+	// freopen("input.txt", "r", stdin);
+	// freopen("player.out", "w", stdout);
+	int turn = 0;
+	int numberOfPlayer, playerId;
+	cin >> numberOfPlayer >> playerId;
+	// cout << "number of players " << numberOfPlayer<<endl;
+	// cout << "playerId "<<playerId<<endl;
+	vector<string> table;
+	vector<pair<int, int> > playersPos;
+	Player myBot;
+	string line;
+	while( true) 
+	{
+		table = vector<string>();
+		playersPos = vector<pair<int, int> >();
+		// cout << " line 0 " << line<<endl;
+		for(int i = 0; i < 20; i++) {
+			cin >> line;
+			// cout << "line "<<i+1<<" "<<line<<endl;
+			table.push_back(line);
+		}
+		for(int i = 0; i < numberOfPlayer; i++)
+		{
+			pair<int, int> pos;
+			cin >> pos.first >> pos.second;
+			// cout <<"P " << i+1 <<" "<<pos.first <<" "<<pos.second <<endl;
+			playersPos.push_back(pos);
+		}
+		if( turn == 0 )
+			myBot = Player(numberOfPlayer, playerId, table, playersPos);
+		else
+			myBot.updateState(State(table, playersPos));
+		// myBot.lastStep = "UP";
+		// cout << "RIGHT" << endl;
+		// cin.ignore(INT_MAX);
+		cout << myBot.getDecision() << endl;
+		turn++;
 	}
-	splix.updateStatePlayer();
-	splix.printPulse();
 	return 0;
 }
 
@@ -373,8 +438,8 @@ Splix::Splix(int _numberOfPlayer)
 	this->turn = 0;
 	pair<int, int> pos[4] = {
 		make_pair(5,5),
-		make_pair(5, 24),
-		make_pair(14, 5),
+		make_pair(5, 15),
+		make_pair(9, 10),
 		make_pair(14, 24)
 	};
 	// pair<int, int> pos[4] = {
@@ -471,39 +536,31 @@ State::State(const vector<string>& _table, const vector<pair<int, int> >& _playe
 }
 void State::printState()
 {
-	// for(int i = 0; i < 20; i++) {
-	// 	for(int j = 0; j < 30; j++) {
-	// 		if( this->lastCellState[i][j] == '0')
-	// 			cout << ".";
-	// 		else
-	// 			cout << this->lastCellState[i][j];
-	// 	}
-	// 	cout << endl;
-	// }
-	// cout << "----------------------------------" << endl;
-	// for(int i = 0; i < 20; i++)
-	// {
-	// 	// cout << this->table[i] << endl;
-	// 	for(int j = 0; j < 30; j++)
-	// 	{
-	// 		if( this->table[i][j] == '0')
-	// 			cout << ".";
-	// 		else
-	// 			cout << this->table[i][j];
-	// 	}
-	// 	cout << endl;
-	// }
-	// for(int i = 0; i < this->playersPos.size(); i++)
-	// {
-	// 	cout << this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
-	// }
-	for(int i = 0; i < 20; i++) 
+	for(int i = 0; i < 20; i++) {
+		for(int j = 0; j < 30; j++) {
+			if( this->lastCellState[i][j] == '0')
+				cout << ".";
+			else
+				cout << this->lastCellState[i][j];
+		}
+		cout << endl;
+	}
+	cout << "----------------------------------" << endl;
+	for(int i = 0; i < 20; i++)
 	{
-		cout << this->table[i] << endl;
+		// cout << this->table[i] << endl;
+		for(int j = 0; j < 30; j++)
+		{
+			if( this->table[i][j] == '0')
+				cout << ".";
+			else
+				cout << this->table[i][j];
+		}
+		cout << endl;
 	}
 	for(int i = 0; i < this->playersPos.size(); i++)
 	{
-		cout << this->playersPos[i].first <<" "<<this->playersPos[i].second << endl;
+		cout << this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
 	}
 }
 
@@ -621,7 +678,7 @@ int Helper::decisionInLaw(int playerId,const vector<State>& states, const string
 	pair<int, int> newPos;
 	newPos.first = state.playersPos[playerId-1].first + dir_x[directId];
 	newPos.second = state.playersPos[playerId-1].second + dir_y[directId];
-	cout << "newPos " << newPos.first <<" "<<newPos.second << endl;
+	// cout << "newPos " << newPos.first <<" "<<newPos.second << endl;
 	bool isOuter = this->isOuter(newPos);
 	if( isOuter ) return -1;
 	bool goInOwnUnstable = state.table[newPos.first][newPos.second] == playerId * 2 + '0';
@@ -682,7 +739,7 @@ State Helper::updateGame(int playerId, const vector<State>& states, State lastSt
 	newPos.second = pos.second + dir_y[directID];
 	int x = lastState.table[newPos.first][newPos.second] - '0';
 	if( x > 0 && x % 2 == 0) {
-		cout <<"Player "<<playerId<<" hit Player "<<x/2<<endl;
+		// cout <<"Player "<<playerId<<" hit Player "<<x/2<<endl;
 		lastState = this->removePlayer(x/2, lastState);
 	}
 	if( lastState.table[newPos.first][newPos.second] == playerId * 2 - 1 + '0')
