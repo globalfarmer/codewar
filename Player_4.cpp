@@ -130,23 +130,7 @@ void Player::updateState(const State& newState)
 			}
 		}
 	}
-
-	for(int j = 0; j < 4; j++)
-	{
-		pair<int, int> nextPos = helper.nextPos(this->state.playersPos[this->ownID-1], DIRECT_XY[j]);
-		if( 
-			helper.inBoard(nextPos) && 
-			!helper.opositeDirection(this->dirStr[this->ownID-1], DIRECT_NAME[j]) &&
-			!helper.inUnstable(nextPos, this->ownID, newState)
-		  )
-		{
-			this->nextSteps[j] = nextPos;
-		}
-		else
-		{
-			this->nextSteps[j] = make_pair(-1, -1);
-		}
-	}
+	this->nextSteps = helper.getNextSteps(this->state.playersPos[this->ownID-1], this->ownID, newState, dirStr[this->ownID-1]);
 	this->state = newState;
 	this->turn++;
 }
