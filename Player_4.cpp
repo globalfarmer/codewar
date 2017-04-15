@@ -1,6 +1,6 @@
 /**
 / (1) if have other cell(not own stable or unstable) that also next to a stable and this stable cell and all unstable cell cant reach by enemy in x go to this unstable ( x <= 2 emergency > 2 is not)
-/ if in stable find road to bound ( find shorstest path to the broadest bound)
+
 / if in bound
 /    + (1)
 /    + 
@@ -17,7 +17,7 @@
 using namespace std;
 const string DIRECT_NAME[4] = {"RIGHT", "DOWN", "LEFT", "UP"};
 const pair<int, int> DIRECT_XY[4] = {make_pair(0,1), make_pair(1, 0), make_pair(0,-1), make_pair(-1,0)};
-const int oo = 1000000;
+const int oo = 9;
 class State
 {
 public:
@@ -63,8 +63,8 @@ public:
 };
 int main() 
 {
-	freopen("input.txt", "r", stdin);
-	freopen("output.txt", "w", stdout);
+	// freopen("input.txt", "r", stdin);
+	// freopen("output.txt", "w", stdout);
 	int numberOfPlayer, playerId, turn = 0;
 	string line;
 	cin >> numberOfPlayer;
@@ -73,6 +73,7 @@ int main()
 	vector<pair<int, int> > playersPos(numberOfPlayer);
 	Player myBot(numberOfPlayer, playerId);
 	while(true) 
+	// for(int loop = 0; loop < 1; loop++)
 	{
 
 		bool isReturned = false;
@@ -85,12 +86,17 @@ int main()
 				isReturned = true;
 			}
 			table[i] = line;
+			// cout << "line " <<i<<" "<<line<<endl;
 		}
+		// cout <<"OK"<<endl;
 		for(int i = 0; i < numberOfPlayer; i++)
 		{
 			cin >> playersPos[i].first >> playersPos[i].second;
+			// cout << "Player "<<i<<" "<<playersPos[i].first <<" "<<playersPos[i].second << endl;
 		}
+		// cout << "OK" << endl;
 		myBot.updateState(State(table, playersPos));
+		// cout << "OK" << endl;
 		if( !isReturned )
 			cout << myBot.getDecision() << endl;
 	}
@@ -100,6 +106,12 @@ State::State(const vector<string>& _table, const vector<pair<int, int> >& _playe
 {
 	this->table = _table;
 	this->playersPos = _playersPos;
+	// for(int i = 0; i < this->table.size(); i++) {
+	// 	cout <<"line "<<i<<" "<<this->table[i]<<endl;
+	// }
+	// for(int i = 0; i < this->playersPos.size(); i++){
+	// 	cout <<"Player "<<i<<" "<<this->playersPos[i].first <<" "<<this->playersPos[i].second<<endl;
+	// }
 }
 State::State() {}
 Player::Player(const int& _numberOfPlayer, const int& _playerId)
@@ -130,8 +142,10 @@ void Player::updateState(const State& newState)
 			}
 		}
 	}
-	this->nextSteps = helper.getNextSteps(this->state.playersPos[this->ownID-1], this->ownID, newState, dirStr[this->ownID-1]);
+	// cout <<"[PLAYER::updateState] OK"<<endl;
+	// cout <<"[PlAYER::updateState] Player " << this->ownID <<" is in "<<this->state.playersPos[this->ownID-1].first <<" "<<
 	this->state = newState;
+	this->nextSteps = helper.getNextSteps(newState.playersPos[this->ownID-1], this->ownID, newState, dirStr[this->ownID-1]);
 	this->turn++;
 }
 string Player::getEmergencyDecision()
@@ -141,35 +155,55 @@ string Player::getEmergencyDecision()
 }
 string Player::inUnstableOrBoundCase()
 {
-	queue<pair<pair<int, int>, int> > q;
+	// cout <<"[Player::inUnstableOrBoundCase]"<<endl;
+	queue<pair<pair<int, int>, pair<int, string> > > q;
 	vector<vector<int> > dist = vector<vector<int> >(20, vector<int>(30, oo));
-	for(int i = 0; i < this->numberOfPlayer; i++) if(this->ownID != i+1 && this->state.playersPos[i] == make_pair(-1, -1))
+	// cout << this->numberOfPlayer << endl;
+	// for(int i = 0; i < this->numberOfPlayer; i++) cout << this.state.playersPos[i].first <<" "<<this.state.playersPos[i].second << endl;
+	for(int i = 0; i < this->numberOfPlayer; i++) if(this->ownID != i+1 && this->state.playersPos[i] != make_pair(-1, -1))
 	{
-		q.push(make_pair(this->state.playersPos[i], i+1));
+		q.push(make_pair(this->state.playersPos[i], make_pair(i+1, this->dirStr[i])));
 		dist[this->state.playersPos[i].first][this->state.playersPos[i].second] = 0;
 	}
 	while(!q.empty())
 	{
-		pair<pair<int, int>, int> u = q.front(); q.pop();
-		if( dist[u.first.first][u.first.second] == 2 )
+		pair<pair<int, int>, pair<int, string> > u = q.front(); q.pop();
+		if( dist[u.first.first][u.first.second] == 3 )
 			continue;
-		vector<pair<int, int> > steps = helper.getNextSteps(u.first, u.second, this->state, "");
+		// cout <<" stay "<<u.first.first <<" "<<u.first.second <<" "<<dist[u.first.first][u.first.second] << endl;
+		vector<pair<int, int> > steps = helper.getNextSteps(u.first, u.second.first, this->state, u.second.second);
 		for(int i = 0; i < 4; i++) 
+		{
+			// cout <<" to "<<steps[i].first <<" "<<steps[i].second << endl;
 			if(steps[i] != make_pair(-1, -1) && dist[steps[i].first][steps[i].second] == oo)
 			{
 				dist[steps[i].first][steps[i].second] = dist[u.first.first][u.first.second] + 1;
-				q.push(make_pair(steps[i],u.second));
+				q.push(make_pair(steps[i],make_pair(u.second.first, DIRECT_NAME[i])));
 			}
+		}
 	}
+	// for(int i = 0; i < 20; i++) {
+	// 	for(int j = 0; j < 30; j++) cout << dist[i][j];
+	// 	cout << endl;
+	// }
+	// for(int i = 0; i < 4; i++) {
+		// cout << this->nextSteps[i].first <<" "<<this->nextSteps[i].second << endl;
+	// }
 	// get my time
 	int myTime = helper.getMyTime(this->ownID, this->state, dist);
+	// cout << myTime << endl;
 
 	for(int ii = 0; ii < 4; ii++) if( this->nextSteps[ii] != make_pair(-1, -1))
 	{
 		pair<int, int> nextPos = this->nextSteps[ii];
+		// cout << "nextPos "<<nextPos.first <<" "<<nextPos.second << endl;
 		if( !helper.inStable(nextPos, this->ownID, this->state))
 		{
 			vector<pair<int, int> > steps = helper.getNextSteps(nextPos, this->ownID, this->state, DIRECT_NAME[ii]);
+			// for(int j2 = 0; j2 < 4; j2++) 
+			// {
+				// cout << steps[j2].first <<" "<<steps[j2].second << endl;
+			// }
 			for(int j2 = 0; j2 < 4; j2++) if( steps[j2] != make_pair(-1, -1) && helper.inStable(steps[j2], this->ownID, this->state))
 			{
 				if(myTime <= 2 )
@@ -177,14 +211,32 @@ string Player::inUnstableOrBoundCase()
 					this->emergency = true;
 					this->emergencyStep = DIRECT_NAME[j2];
 				}
-				return DIRECT_NAME[j2];
+				return DIRECT_NAME[ii];
+			}
+			for(int j2 = 0; j2 < 4; j2++) if(steps[j2] != make_pair(-1, -1))
+			{
+				vector<pair<int, int> >steps2 = helper.getNextSteps(steps[j2], this->ownID, this->state, DIRECT_NAME[j2]);
+				for(int j3 = 0; j3 < 4; j3++) if( steps2[j3] != make_pair(-1, -1) && helper.inStable(steps2[j3], this->ownID, this->state))
+				{
+					if(myTime <= 3 )
+					{
+						this->emergency = true;
+						this->emergencyStep = DIRECT_NAME[j2];
+					}
+					return DIRECT_NAME[ii];
+				}
 			}
 		}
 	}
+	for(int i = 0; i < 4; i++) 
+		if( this->nextSteps[i] != make_pair(-1, -1) && helper.inStable(this->nextSteps[i], this->ownID, this->state) )
+			return DIRECT_NAME[i];
+	// this case when bot can go into a cell that not own territory(not stable and not unstable) in 2 or 3 so to a stable
 	return "ERROR";
 }
 string Player::inStableCase()
 {
+	// cout << "[Player::inStableCase]" << endl;
 	vector<pair<int, int> > bounds;
 	string decision = "";
 	int minDist = oo;
@@ -194,14 +246,19 @@ string Player::inStableCase()
 		{
 			if( helper.inStable(make_pair(i, j), this->ownID, this->state) && helper.isBound(make_pair(i, j), this->ownID, this->state)) 
 			{
+				// cout << i <<" "<<j<<endl;
 				int oldDist = abs(this->state.playersPos[this->ownID-1].first - i) + abs(this->state.playersPos[this->ownID-1].second-j);
-				for(int kk; kk < 4; kk++) if(this->nextSteps[kk] != make_pair(-1, -1))
+				// cout << oldDist << endl;
+				for(int kk=0; kk < 4; kk++) if(this->nextSteps[kk] != make_pair(-1, -1))
 				{
 					pair<int, int> nextStep = this->nextSteps[kk];
 					int newDist = abs(nextStep.first-i) + abs(nextStep.second-j);
+					// cout <<"To "<< nextStep.first <<" "<<nextStep.second << endl;
+					// cout <<" newDist " << newDist<<endl;
 					if( oldDist > newDist && minDist > newDist )
 					{
 						decision = DIRECT_NAME[kk];
+						minDist = newDist;
 					}
 				}
 			}
@@ -225,7 +282,11 @@ vector<pair<int, int> > Helper::getNextSteps(const pair<int, int>& curPos, const
 	vector<pair<int, int> > nextSteps;
 	for(int j = 0; j < 4; j++)
 	{
+		// cout <<"[Helper::getNextSteps] "<<j<<endl;
+		// cout << DIRECT_XY[j].first <<" "<<DIRECT_XY[j].second << endl;
+		// cout << curPos.first <<" "<<curPos.second<<endl;
 		pair<int, int> nextPos = helper.nextPos(curPos, DIRECT_XY[j]);
+		// cout << nextPos.first <<" "<<nextPos.second<<endl;
 		if( 
 			helper.inBoard(nextPos) && 
 			!helper.opositeDirection(preDirStr, DIRECT_NAME[j]) &&
