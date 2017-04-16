@@ -219,6 +219,7 @@ string Player::inUnstableOrBoundCase()
 			// {
 				// cout << steps[j2].first <<" "<<steps[j2].second << endl;
 			// }
+			//[TODO] dist[nextPos.first][nextPos.second] >= 2
 			for(int j2 = 0; j2 < 4; j2++) if( steps[j2] != make_pair(-1, -1) && helper.inStable(steps[j2], this->ownID, this->state) && myTime >= 2)
 			{
 				if(myTime <= 2 )
