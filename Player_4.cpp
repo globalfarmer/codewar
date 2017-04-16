@@ -26,7 +26,7 @@ public:
 	State();
 	// State(const State&);
 	State(const vector<string>&, const vector<pair<int, int> >&);
-	void printState();
+	void printState() const;
 };
 class Helper
 {
@@ -48,7 +48,7 @@ public:
 	int numberOfPlayer;
 	int ownID;
 	bool emergency;
-	string emergencyStep;
+	queue<string> emergencyStep;
 	State state;
 	vector<pair<int, int> > nextSteps;
 	vector<int> dirId;
@@ -63,7 +63,7 @@ public:
 };
 int main() 
 {
-	// freopen("input.txt", "r", stdin);
+	// freopen("in1.txt", "r", stdin);
 	// freopen("output.txt", "w", stdout);
 	int numberOfPlayer, playerId, turn = 0;
 	string line;
@@ -73,7 +73,7 @@ int main()
 	vector<pair<int, int> > playersPos(numberOfPlayer);
 	Player myBot(numberOfPlayer, playerId);
 	while(true) 
-	// for(int loop = 0; loop < 1; loop++)
+	// for(int loop = 0; loop < 2; loop++)
 	{
 
 		bool isReturned = false;
@@ -114,18 +114,32 @@ State::State(const vector<string>& _table, const vector<pair<int, int> >& _playe
 	// }
 }
 State::State() {}
+void State::printState() const
+{
+	cout << "[printState]" << endl;
+	for(int i = 0; i < 20; i++) 
+	{
+		cout << this->table[i] << endl;
+	}
+	for(int i = 0; i < this->playersPos.size(); i++)
+	{
+		cout << this->playersPos[i].first <<" "<<this->playersPos[i].second << endl;
+	}
+}
 Player::Player(const int& _numberOfPlayer, const int& _playerId)
 {
 	this->numberOfPlayer = _numberOfPlayer;
 	this->ownID = _playerId;
 	this->turn = 0;
 	this->emergency = false;
+	this->emergencyStep = queue<string>();
 	this->nextSteps = vector<pair<int, int> >(4);
 	this->dirId = vector<int>(_numberOfPlayer, -1);
 	this->dirStr = vector<string>(_numberOfPlayer, "");
 }
 void Player::updateState(const State& newState)
 {
+	// newState.printState();
 	if( this->turn > 0 )
 	{
 		for(int i = 0; i < this->numberOfPlayer; i++) if(newState.playersPos[i] != make_pair(-1, -1))
@@ -150,8 +164,9 @@ void Player::updateState(const State& newState)
 }
 string Player::getEmergencyDecision()
 {
-	this->emergency = false;
-	return this->emergencyStep;
+	string ret = this->emergencyStep.front(); this->emergencyStep.pop();
+	this->emergency = !this->emergencyStep.empty();
+	return ret;
 }
 string Player::inUnstableOrBoundCase()
 {
@@ -204,30 +219,35 @@ string Player::inUnstableOrBoundCase()
 			// {
 				// cout << steps[j2].first <<" "<<steps[j2].second << endl;
 			// }
-			for(int j2 = 0; j2 < 4; j2++) if( steps[j2] != make_pair(-1, -1) && helper.inStable(steps[j2], this->ownID, this->state))
+			for(int j2 = 0; j2 < 4; j2++) if( steps[j2] != make_pair(-1, -1) && helper.inStable(steps[j2], this->ownID, this->state) && myTime >= 2)
 			{
 				if(myTime <= 2 )
 				{
+					// cout <<"OK emergency "<<" "<<DIRECT_NAME[j2]<<endl;
 					this->emergency = true;
-					this->emergencyStep = DIRECT_NAME[j2];
+					this->emergencyStep.push(DIRECT_NAME[j2]);
 				}
 				return DIRECT_NAME[ii];
 			}
-			for(int j2 = 0; j2 < 4; j2++) if(steps[j2] != make_pair(-1, -1))
+			for(int j2 = 0; j2 < 4; j2++) if(steps[j2] != make_pair(-1, -1) && dist[nextPos.first][nextPos.second] >= 3 && myTime >= 3)
 			{
+				// cout << "next pos "<<ii<<endl;
 				vector<pair<int, int> >steps2 = helper.getNextSteps(steps[j2], this->ownID, this->state, DIRECT_NAME[j2]);
 				for(int j3 = 0; j3 < 4; j3++) if( steps2[j3] != make_pair(-1, -1) && helper.inStable(steps2[j3], this->ownID, this->state))
 				{
-					if(myTime <= 3 )
+					// cout <<" OK "<<endl;
+					if(myTime == 3 )
 					{
 						this->emergency = true;
-						this->emergencyStep = DIRECT_NAME[j2];
+						this->emergencyStep.push(DIRECT_NAME[j2]);
+						this->emergencyStep.push(DIRECT_NAME[j3]);
 					}
 					return DIRECT_NAME[ii];
 				}
 			}
 		}
 	}
+	// cout << " OK " << endl;
 	for(int i = 0; i < 4; i++) 
 		if( this->nextSteps[i] != make_pair(-1, -1) && helper.inStable(this->nextSteps[i], this->ownID, this->state) )
 			return DIRECT_NAME[i];
