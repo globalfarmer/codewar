@@ -83,7 +83,7 @@ int main()
 // time_t start,end;
 // time (&start);
 
-	// freopen("in1.txt", "r", stdin);
+	freopen("in1.txt", "r", stdin);
 	// freopen("output.txt", "w", stdout);
 	int numberOfPlayer, playerId, turn = 0;
 	string line;
@@ -93,8 +93,8 @@ int main()
 	vector<pair<int, int> > playersPos(numberOfPlayer);
 	Player myBot(numberOfPlayer, playerId);
 	Player enemy(numberOfPlayer, 3 - playerId);
-	while(true)
-	// for(int loop = 0; loop < 1; loop++)
+	// while(true)
+	for(int loop = 0; loop < 1; loop++)
 	{
 		for(int i = 0; i < 20; i++)
 		{
@@ -320,7 +320,7 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 					pair<int, string> eval_dir = decision2Player.tryPath(myBot, enemy, myTime, r, c, x, y);
 					if( eval_dir.first > evaluate )
 					{
-						// cout <<" "<<r<<" "<<c<<" "<<x<<" "<<y<<" "<<eval_dir.first<<" "<<eval_dir.second<<endl;
+						cout <<" "<<r<<" "<<c<<" "<<x<<" "<<y<<" "<<eval_dir.first<<" "<<eval_dir.second<<endl;
 						evaluate = eval_dir.first;
 						ret = eval_dir.second;
 					}
