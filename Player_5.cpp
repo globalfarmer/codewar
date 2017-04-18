@@ -55,6 +55,7 @@ public:
 	vector<vector<int> > _dist;
 	vector<vector<int> > min_d;
 	vector<vector<pair<int, int> > > trace;
+	vector<vector<int> > g;
 	vector<vector<int> > sum;
 	int lastStepId;
 	Player();
@@ -62,6 +63,7 @@ public:
 	string getEmergencyDecision();
 	void updateDistance();
 	void updateSum();
+	void updateG();
 	void updateState(const State&);
 	pair<int, int> getCurPos();
 };
@@ -73,7 +75,6 @@ public:
 	Decision2Player();
 	string getDecisionAsFirstPlayer(Player, Player);
 	string getEmergencyDecision();
-	pair<int, string> tryPath(const Player&, const Player& ,const int&, const int&, const int&, const int&, const int&);
 	bool canKillEnemy(Player, Player);
 	string inUnstableOrBoundCase(Player, Player);
 	string inStableCase(Player, Player);
@@ -83,7 +84,7 @@ int main()
 // time_t start,end;
 // time (&start);
 
-	// freopen("in1.txt", "r", stdin);
+	freopen("in1.txt", "r", stdin);
 	// freopen("output.txt", "w", stdout);
 	int numberOfPlayer, playerId, turn = 0;
 	string line;
@@ -93,8 +94,8 @@ int main()
 	vector<pair<int, int> > playersPos(numberOfPlayer);
 	Player myBot(numberOfPlayer, playerId);
 	Player enemy(numberOfPlayer, 3 - playerId);
-	while(true)
-	// for(int loop = 0; loop < 2; loop++)
+	// while(true)
+	for(int loop = 0; loop < 1; loop++)
 	{
 		for(int i = 0; i < 20; i++)
 		{
@@ -224,6 +225,29 @@ void Player::updateSum()
 		}
 	}
 }
+void Player::updateG()
+{
+	queue<pair<int, int> > q;
+	this->g = vector<vector<int> >(20, vector<int>(30, oo));
+	for(int i = 0; i < 20; i++) 
+	{
+		for(int j = 0; j < 30; j++) if(helper.inStable(make_pair(i, j), this->ownID, this->state))
+		{
+			q.push(make_pair(i,j));
+			this->g[i][j] = 0;
+		}
+	}
+	while(!q.empty())
+	{
+		pair<int, int> u = q.front(); q.pop();
+		vector<pair<int, int> > steps = helper.getNextSteps(u, this->ownID, this->state);
+		for(int i = 0; i < 4; i++) if( steps[i] != make_pair(-1, -1) && this->g[steps[i].first][steps[i].second] == oo)
+		{
+			this->g[steps[i].first][steps[i].second] = this->g[u.first][u.second] + 1;
+			q.push(steps[i]);
+		}
+	}
+}
 void Player::updateState(const State& newState)
 {
 	// newState.printState();
@@ -233,7 +257,9 @@ void Player::updateState(const State& newState)
 	this->nextSteps = helper.getNextSteps(newState.playersPos[this->ownID-1], this->ownID, newState);
 	this->turn++;
 	this->updateDistance();
+	this->updateG();
 	this->updateSum();
+
 }
 string Decision2Player::getEmergencyDecision()
 {
@@ -244,31 +270,7 @@ string Decision2Player::getEmergencyDecision()
 string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 {
 	int myTime = helper.getMyTime(myBot.ownID, myBot.state, enemy.min_d);
-	queue<pair<int, int> > q;
-	vector<vector<int> > g = vector<vector<int> >(20, vector<int>(30, oo));
-	for(int i = 0; i < 20; i++) 
-	{
-		for(int j = 0; j < 30; j++) if(helper.inStable(make_pair(i, j), myBot.ownID, myBot.state))
-		{
-			q.push(make_pair(i,j));
-			g[i][j] = 0;
-		}
-	}
-	while(!q.empty())
-	{
-		pair<int, int> u = q.front(); q.pop();
-		vector<pair<int, int> > steps = helper.getNextSteps(u, myBot.ownID, myBot.state);
-		for(int i = 0; i < 4; i++) if( steps[i] != make_pair(-1, -1) && g[steps[i].first][steps[i].second] == oo)
-		{
-			g[steps[i].first][steps[i].second] = g[u.first][u.second] + 1;
-			q.push(steps[i]);
-		}
-	}
-	// for(int i = 0; i < 20; i++)
-	// {
-	// 	for(int j = 0; j < 30; j++) cout << g[i][j]<<" ";cout << endl;
-	// }
-	// inStable
+	
 	if(myTime == oo) 
 	{
 		// cout <<"OK"<<endl;
@@ -295,17 +297,18 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 			pair<int, int> nextPos = myBot.nextSteps[i];
 			if( nextPos != make_pair(-1, -1) && 
 				!helper.inStable(nextPos, myBot.ownID, myBot.state) &&
-				enemy.min_d[nextPos.first][nextPos.second] >= 4
+				enemy.min_d[nextPos.first][nextPos.second] >= 4 && 
+				enemy.min_d[curPos.first][curPos.second] >= 4
 				)
 			{
-				// cout << "OK 3 steps"<<endl;
+				// cout << "OK 3 steps"<<" "<<nextPos.first<<" "<<nextPos.second<<endl;
 				vector<pair<int, int> > steps = helper.getNextSteps(nextPos, myBot.ownID, myBot.state);
 				for(int ii = 0; ii < 4; ii++) if( steps[ii] != make_pair(-1, -1) && !helper.inStable(steps[ii], myBot.ownID, myBot.state))
 				{
 					vector<pair<int, int> > steps2 = helper.getNextSteps(steps[ii], myBot.ownID, myBot.state);
 					for(int i2 = 0; i2 < 4; i2++)  if( steps2[i2] != make_pair(-1, -1) && helper.inStable(steps2[i2], myBot.ownID, myBot.state))
 					{
-						// cout <<"3 steps"<<endl;
+						// cout <<"3 steps"<<" "<<DIRECT_NAME[i]<<endl;
 
 						return DIRECT_NAME[i];
 					}
@@ -326,11 +329,11 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
 		{
 			pair<int, int> nextPos = myBot.nextSteps[i];
-			if(g[nextPos.first][nextPos.second] < tmpMyTime ) 
+			if(myBot.g[nextPos.first][nextPos.second] < tmpMyTime ) 
 			{
-				if( max_g < g[nextPos.first][nextPos.second] )
+				if( max_g < myBot.g[nextPos.first][nextPos.second] )
 				{
-					max_g = g[nextPos.first][nextPos.second];
+					max_g = myBot.g[nextPos.first][nextPos.second];
 					decision = DIRECT_NAME[i];
 				}
 			}
@@ -386,6 +389,16 @@ Decision2Player::Decision2Player()
 }
 bool Decision2Player::canKillEnemy(Player myBot, Player enemy)
 {
+	int enemyTime = helper.getMyTime(enemy.ownID, enemy.state, myBot.min_d);
+	int fastestTime = oo;
+	for(int i = 0; i < 4; i++) if( enemy.nextSteps[i] != make_pair(-1, -1) ) {
+		pair<int, int> nextPos = enemy.nextSteps[i];
+		fastestTime = min(fastestTime, enemy.g[nextPos.first][nextPos.second]+1);
+	}
+	if( enemyTime < fastestTime ) 
+	{
+
+	}
 	return false;
 }
 string Decision2Player::getDecisionAsFirstPlayer(Player myBot, Player enemy)
@@ -403,7 +416,8 @@ string Decision2Player::getDecisionAsFirstPlayer(Player myBot, Player enemy)
 		ret = decision2Player.inUnstableOrBoundCase(myBot, enemy);
 	}
 	// in stable
-	ret = decision2Player.inStableCase(myBot, enemy);
+	else
+		ret = decision2Player.inStableCase(myBot, enemy);
 	return ret;
 }
 vector<pair<int, int> > Helper::getNextSteps(const pair<int, int>& curPos, const int& playerId, const State& state)
