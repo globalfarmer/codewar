@@ -90,6 +90,13 @@ public:
 } decision2Player;
 int main()
 {
+// vector<pair<int, int> > ps;
+// ps.push_back(make_pair(0,18));
+// ps.push_back(make_pair(10, 18));
+// ps.push_back(make_pair(9, 18));
+// // ps.push_back(make_pair(9, 19));
+// cout << helper.niceDecision(make_pair(9, 19), ps) << endl;
+// return 0;
 // time_t start,end;
 // time (&start);
 
@@ -104,7 +111,7 @@ int main()
 	Player myBot(numberOfPlayer, playerId);
 	Player enemy(numberOfPlayer, 3 - playerId);
 	while(true)
-	// for(int loop = 0; loop < 4; loop++)
+	// for(int loop = 0; loop < 1; loop++)
 	{
 		bool isReturned = false;
 		for(int i = 0; i < 20; i++)
@@ -308,9 +315,11 @@ void Player::updateState(const State& newState)
 		pair<int, int> v1 = helper.getVector(*(this->tracePos.begin()), *(this->tracePos.end()-2));
 		pair<int, int> v2 = helper.getVector(*(this->tracePos.begin()), *(this->tracePos.end()-1));
 		pair<int, int> v3 = helper.getVector(*(this->tracePos.begin()), this->getCurPos());
-		if( helper.ccw(v1, v2) * helper.ccw(v2, v3) >= 0 )
+		int product_1 = helper.ccw(v1, v2);
+		int product_2 = helper.ccw(v2, v3);
+		if( product_1 * product_2 > 0 || (product_1 == 0 && product_2 == 0) )
 			break;
-		this->tracePos.erase(this->tracePos.end()-1);
+		this->tracePos.erase(this->tracePos.end()-2);
 	}
 	this->tracePos.push_back(newState.playersPos[this->ownID-1]);
 	this->updateDistance();
@@ -395,8 +404,16 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 	}
 	else
 	{
-		int tmpMyTime = myTime * 2 / 3;
+		int tmpMyTime = myTime / 2;
 		if( tmpMyTime == 1 && myTime == 2) tmpMyTime = 0;
+		// if( myTime <= 3 ) 
+		// {
+		// 	for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
+		// 	{
+		// 		vector<pair<int, int> > steps = helper.getNextSteps(myBot.nextSteps[i], myBot.ownID, myBot.state, "");
+		// 		for(int i2 = 0; i2 < 4; i2++) if( steps[i2] != make_pair(-1, -1))
+		// 	}
+		// }
 		// cout <<"[inUnstableOrBound] OK "<<myTime<<" "<<tmpMyTime<<endl;
 		int max_g = -oo, nice_max_g = -oo;
 		string decision = "";
@@ -425,6 +442,8 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 				}
 			}
 		}
+		// cout<<"[inUnstableOrBound] " << niceDecision <<" "<<decision<<" "<<myTime<<endl;
+
 		if( niceDecision != "")
 			return niceDecision;
 		else if( decision != "")
@@ -432,7 +451,7 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
 		{
 			pair<int, int> nextPos = myBot.nextSteps[i];
-			if(myBot.g[nextPos.first][nextPos.second] < myTime) 
+			if(myBot.g[nextPos.first][nextPos.second] <= myTime) 
 			{
 				if( max_g < myBot.g[nextPos.first][nextPos.second] )
 				{
@@ -446,6 +465,7 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 				}
 			}
 		}
+		cout<<"[inUnstableOrBound] " << niceDecision <<" "<<decision<<" "<<myTime<<endl;
 		if( niceDecision != "")
 			return niceDecision;
 		return decision;
@@ -608,12 +628,13 @@ int Helper::ccw(const pair<int, int>& p1, const pair<int, int>& p2)
 }
 bool Helper::niceDecision(const pair<int, int>& pos, const vector<pair<int, int> >& tracePos)
 {
+	// cout << tracePos.size() << endl;
 	if(tracePos.size() < 3)
 		return true;
 	// cout <<" "<<(*tracePos.begin()).first<<" "<<(*tracePos.begin()).second<<endl;
-	// pair<int, int> p1 = *(tracePos.end()-2);
+	pair<int, int> p1 = *(tracePos.end()-2);
 	// cout << p1.first <<" - "<<p1.second<<endl;
-	// pair<int, int> p2 = *(tracePos.end()-1);
+	pair<int, int> p2 = *(tracePos.end()-1);
 	// cout << p2.first <<" - "<<p2.second<<endl;
 	pair<int, int> v1 = helper.getVector(*(tracePos.begin()), *(tracePos.end()-2));
 	pair<int, int> v2 = helper.getVector(*(tracePos.begin()), *(tracePos.end()-1));
@@ -621,9 +642,10 @@ bool Helper::niceDecision(const pair<int, int>& pos, const vector<pair<int, int>
 	// cout <<v1.first<<" v1 "<<v1.second<<endl;
 	// cout <<v2.first<<" v2 "<<v2.second<<endl;
 	// cout <<v3.first<<" v3 "<<v3.second<<endl;
-
+	int product_1 = helper.ccw(v1, v2);
+	int product_2 = helper.ccw(v2, v3);
 	// cout <<"[niceDecision] "<<pos.first <<" "<<pos.second<<" "<< helper.ccw(v1, v2) <<" "<<helper.ccw(v2, v3) << endl;
-	return helper.ccw(v1, v2) * helper.ccw(v2, v3) >= 0;
+	return (product_1 * product_2 > 0 || (product_1 == 0 && product_2==0));
 }
 pair<int, int> Helper::getVector(const pair<int, int>& startPoint, const pair<int, int>& endPoint)
 {
