@@ -62,6 +62,7 @@ public:
 	vector<vector<int> > g;
 	vector<vector<int> > sum;
 	int lastStepId;
+	int curUnstable;
 	string dirId;
 	string dirStr;
 	vector<pair<int, int> > tracePos;
@@ -81,7 +82,7 @@ public:
 	queue<string> emergencySteps;
 	bool emergency;
 	Decision2Player();
-	string getDecisionAsFirstPlayer(Player, Player);
+	string getDecisionAsFirstPlayer(Player&, Player&);
 	string getEmergencyDecision();
 	bool canKillEnemy(Player, Player);
 	string inUnstableOrBoundCase(Player, Player);
@@ -294,6 +295,7 @@ void Player::updateState(const State& newState)
 	{
 		this->tracePos = vector<pair<int, int> >();
 		this->nextSteps = helper.getNextSteps(newState.playersPos[this->ownID-1], this->ownID, newState, "");
+		this->curUnstable = 0;
 	}
 	else
 	{
@@ -393,12 +395,19 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 	}
 	else
 	{
-		int tmpMyTime = myTime / 2;
+		int tmpMyTime = myTime * 2 / 3;
 		if( tmpMyTime == 1 && myTime == 2) tmpMyTime = 0;
 		// cout <<"[inUnstableOrBound] OK "<<myTime<<" "<<tmpMyTime<<endl;
 		int max_g = -oo, nice_max_g = -oo;
 		string decision = "";
 		string niceDecision = "";
+		for(int i = 0; i < 4; i++) 
+			if( myBot.nextSteps[i] != make_pair(-1, -1) && 
+				myBot.curUnstable > 10 && 
+				helper.inStable(myBot.nextSteps[i], myBot.ownID, myBot.state))
+		{
+			return DIRECT_NAME[i];
+		}
 		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
 		{
 			pair<int, int> nextPos = myBot.nextSteps[i];
@@ -406,17 +415,13 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 			{
 				if( max_g < myBot.g[nextPos.first][nextPos.second] )
 				{
-					if( helper.niceDecision(nextPos, myBot.tracePos))
-					{
-						nice_max_g = myBot.g[nextPos.first][nextPos.second];
-						niceDecision = DIRECT_NAME[i];
-					}
-					else
-					{
-						max_g = myBot.g[nextPos.first][nextPos.second];
-						decision = DIRECT_NAME[i];	
-					}
-					
+					max_g = myBot.g[nextPos.first][nextPos.second];
+					decision = DIRECT_NAME[i];	
+				}
+				if( nice_max_g < myBot.g[nextPos.first][nextPos.second] && helper.niceDecision(nextPos, myBot.tracePos))
+				{
+					nice_max_g = myBot.g[nextPos.first][nextPos.second];
+					niceDecision = DIRECT_NAME[i];
 				}
 			}
 		}
@@ -431,17 +436,13 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 			{
 				if( max_g < myBot.g[nextPos.first][nextPos.second] )
 				{
-					if( helper.niceDecision(nextPos, myBot.tracePos))
-					{
-						nice_max_g = myBot.g[nextPos.first][nextPos.second];
-						niceDecision = DIRECT_NAME[i];
-					}
-					else
-					{
-						max_g = myBot.g[nextPos.first][nextPos.second];
-						decision = DIRECT_NAME[i];	
-					}
-					
+					max_g = myBot.g[nextPos.first][nextPos.second];
+					decision = DIRECT_NAME[i];	
+				}
+				if( nice_max_g < myBot.g[nextPos.first][nextPos.second] && helper.niceDecision(nextPos, myBot.tracePos))
+				{
+					nice_max_g = myBot.g[nextPos.first][nextPos.second];
+					niceDecision = DIRECT_NAME[i];
 				}
 			}
 		}
@@ -511,7 +512,7 @@ bool Decision2Player::canKillEnemy(Player myBot, Player enemy)
 	}
 	return false;
 }
-string Decision2Player::getDecisionAsFirstPlayer(Player myBot, Player enemy)
+string Decision2Player::getDecisionAsFirstPlayer(Player& myBot, Player& enemy)
 {
 	// in bound or unstable
 	// cout <<"[getDecisionAsFirstPlayer] Turn "<<myBot.turn<<endl;
@@ -525,6 +526,7 @@ string Decision2Player::getDecisionAsFirstPlayer(Player myBot, Player enemy)
 		     helper.isBound(curPos, myBot.ownID, myBot.state))
 	{
 		ret = decision2Player.inUnstableOrBoundCase(myBot, enemy);
+		myBot.curUnstable++;
 	}
 	// in stable
 	else
