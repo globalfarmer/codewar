@@ -87,7 +87,7 @@ int main()
 // time_t start,end;
 // time (&start);
 
-	// freopen("in1.txt", "r", stdin);
+	freopen("in1.txt", "r", stdin);
 	// freopen("output.txt", "w", stdout);
 	int numberOfPlayer, playerId, turn = 0;
 	string line;
@@ -97,8 +97,8 @@ int main()
 	vector<pair<int, int> > playersPos(numberOfPlayer);
 	Player myBot(numberOfPlayer, playerId);
 	Player enemy(numberOfPlayer, 3 - playerId);
-	while(true)
-	// for(int loop = 0; loop < 2; loop++)
+	// while(true)
+	for(int loop = 0; loop < 1; loop++)
 	{
 		for(int i = 0; i < 20; i++)
 		{
@@ -343,10 +343,38 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 	}
 	else
 	{
-		int tmpMyTime = (myTime + 1 ) / 2;
+		int tmpMyTime = myTime < 3 ? myTime : myTime * 2 / 3;
 		// cout <<"OK "<<myTime<<" "<<tmpMyTime<<endl;
 		int max_g = -oo;
 		string decision = "";
+		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
+		{
+			pair<int, int> nextPos = myBot.nextSteps[i];
+			if(myBot.g[nextPos.first][nextPos.second] < tmpMyTime ) 
+			{
+				if( max_g < myBot.g[nextPos.first][nextPos.second] )
+				{
+					max_g = myBot.g[nextPos.first][nextPos.second];
+					decision = DIRECT_NAME[i];
+				}
+			}
+		}
+		// cout << "OK"<<endl;
+		tmpMyTime = myTime / 2;
+		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
+		{
+			pair<int, int> nextPos = myBot.nextSteps[i];
+			if(myBot.g[nextPos.first][nextPos.second] < tmpMyTime ) 
+			{
+				if( max_g < myBot.g[nextPos.first][nextPos.second] )
+				{
+					max_g = myBot.g[nextPos.first][nextPos.second];
+					decision = DIRECT_NAME[i];
+				}
+			}
+		}
+		// cout <<"OK"<<endl;
+		tmpMyTime = myTime;
 		for(int i = 0; i < 4; i++) if( myBot.nextSteps[i] != make_pair(-1, -1)) 
 		{
 			pair<int, int> nextPos = myBot.nextSteps[i];
@@ -418,7 +446,7 @@ bool Decision2Player::canKillEnemy(Player myBot, Player enemy)
 	}
 	if( enemyTime < fastestTime ) 
 	{
-
+		this->emergency = true;
 	}
 	return false;
 }
