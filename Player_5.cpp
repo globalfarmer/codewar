@@ -465,7 +465,7 @@ string Decision2Player::inUnstableOrBoundCase(Player myBot, Player enemy)
 				}
 			}
 		}
-		cout<<"[inUnstableOrBound] " << niceDecision <<" "<<decision<<" "<<myTime<<endl;
+		// cout<<"[inUnstableOrBound] " << niceDecision <<" "<<decision<<" "<<myTime<<endl;
 		if( niceDecision != "")
 			return niceDecision;
 		return decision;
